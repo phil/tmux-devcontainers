@@ -20,16 +20,19 @@ BASE_COMMAND="docker compose"
 get_project_name() {
     local -r compose_file="$1"
     local project_name=""
+    local devcontainer_name=""
 
     if [[ -n "${COMPOSE_PROJECT_NAME}" ]]; then
         project_name=${COMPOSE_PROJECT_NAME}
-    elif [[ -z "${compose_file}" ]]; then
-        project_name=$(devcontainer read-configuration --workspace-folder "${CURRENT_PANE_PATH}" 2>/dev/null | jq -r '.configuration.name')
+    elif [[ -n "${compose_file}" ]]; then
+        project_name="${CURRENT_PANE_PATH##*/}_devcontainer"
     fi
 
+    devcontainer_name=$(devcontainer read-configuration --workspace-folder "${CURRENT_PANE_PATH}" 2>/dev/null | jq -r '.configuration.name')
+
     if [[ -z "${project_name}" ]] || [[ "${project_name}" == "null" ]]; then
-        if [[ -n "${compose_file}" ]]; then
-            project_name="${CURRENT_PANE_PATH##*/}_devcontainer"
+        if [[ -n "${devcontainer_name}" ]] && [[ "${devcontainer_name}" != "null" ]]; then
+            project_name="${devcontainer_name}"
         else
             project_name="${CURRENT_PANE_PATH##*/}"
         fi
@@ -52,8 +55,8 @@ get_compose_config() {
     if [[ -n "$(grep -i -e 'dockerComposeFile": \[' ${JSON_FILE})" ]]; then
         compose_files=$(grep -v "//" ${JSON_FILE} | jq -r '.dockerComposeFile |= join(" ") | .dockerComposeFile')
     else
-        compose_files=$(grep -i -e 'dockerComposeFile' \"${JSON_FILE}\")
-        compose_files=$(tmp=${compose_file##* }; tmp=${tmp//\"/}; echo "${tmp/,/}")
+        compose_files=$(grep -i -e 'dockerComposeFile' ${JSON_FILE})
+        compose_files=$(tmp=${compose_files##* }; tmp=${tmp//\"/}; echo "${tmp/,/}")
     fi
 
     if [[ -n "${compose_files}" ]]; then
@@ -139,10 +142,11 @@ compose_status() {
 plain_status() {
     local -r project_name="$1"
     local docker_status=""
+    set -x
 
-    status=$(docker ps -a --format json | jq -r ". | select(.Names | contains(\"${project_name}\")) | .State")
+    status=$(docker ps -a --format json | jq -r ". | select(.Names | contains(\"${project_name}\") or contains(\"${CURRENT_PANE_PATH##*/}\")) | .State")
     if [[ -z "${status}" ]]; then
-        status=$(docker ps -all --format json | jq -r ". | select(.Image | contains(\"${project_name}\")) | .State")
+        status=$(docker ps -all --format json | jq -r ". | select(.Image | contains(\"${project_name}\") or contains(\"${CURRENT_PANE_PATH##*/}\")) | .State")
     fi
 
     if [[ -n "${status}" ]]; then
@@ -155,6 +159,7 @@ plain_status() {
             docker_status="${project_name}: unkown"
         fi
     fi
+    set +x
 
     echo "${docker_status}"
 }
