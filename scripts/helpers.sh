@@ -1,4 +1,4 @@
-log() {
+debug() {
     echo "$1" >&2
 }
 
@@ -55,7 +55,11 @@ get_workspace_dir() {
         current_dir=$(dirname "$current_dir")
     done
 
-    echo "$current_dir"
+    if [[ "$current_dir" == "/" ]]; then
+        echo ""
+    else 
+        echo "$current_dir"
+    fi
 }
 
 # Get devcontainer configuration value from the current pane's devcontainer.json
@@ -66,9 +70,13 @@ get_workspace_dir() {
 # Example: get_devcontainer_config ".configuration.name"
 # Example: get_devcontainer_config ".configuration.name" "app-server"
 get_devcontainer_config() {
+    debug "Getting devcontainer config for key path: $1 with default value: $2"
     local key_path="$1"
     local default_value="$2"
+
+    # TODO: Memoize this function to avoid multiple calls to devcontainer read-configuration
     local json=$(devcontainer read-configuration --workspace-folder "$(get_workspace_dir)" 2>/dev/null)
+
     local value=$(echo "$json" | jq -r "${key_path} // \"\"")
 
 
@@ -76,6 +84,13 @@ get_devcontainer_config() {
         echo "$value"
     else
         echo "$default_value"
+    fi
+}
+
+check_workspace() {
+    if [[ -z $(get_workspace_dir) ]]; then
+        tmux display-message "No devcontainer found in the current workspace"
+        exit 0
     fi
 }
 
