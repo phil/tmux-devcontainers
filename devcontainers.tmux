@@ -11,7 +11,7 @@ devcontainers_interpolations=(
 
 devcontainers_commands=(
     "#($CURRENT_DIR/scripts/statusbar/workspace.sh)"
-    "#($CURRENT_DIR/scripts/statusbar/containers.sh)"
+    "#($CURRENT_DIR/scripts/statusbar/status.sh)"
 )
 
 # Usage

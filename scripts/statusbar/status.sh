@@ -40,7 +40,7 @@ get_project_name() {
 
     # local project_name=$(get_devcontainer_config ".configuration.name")
     local devcontainer_config="$1"
-    local project_name=$(echo "$devcontainer_config" | jq -r ".name // \"\"")
+    local project_name=$(echo "$devcontainer_config" | jq -r '.name // ""')
     echo "${project_name}"
 }
 
@@ -74,19 +74,20 @@ get_project_name() {
 get_docker_compose_files() {
     local devcontainer_config="$1"
     # local compose_files=$(get_devcontainer_config ".configuration.dockerComposeFile | .[]")
-    local compose_files=$(echo "$devcontainer_config" | jq -r ".dockerComposeFile | .[]")
+    # take the docker compose and cast it to an array if it is not already
+    local compose_files=$(echo "$devcontainer_config" | jq -r ".dockerComposeFile | arrays // [.] | .[]")
     local workspace_dir=$(get_workspace_dir)
     local compose_files_fp=""
 
     debug "compose_files: $compose_files"
 
-    if [[ -n "${compose_files}" ]]; then
-        for compose_file in ${compose_files}
-        do
-            debug "compose_file: $compose_file"
-            compose_files_fp="${compose_files_fp} ${workspace_dir}/.devcontainer/${compose_file}"
-        done
-    fi
+    for compose_file in ${compose_files}
+    do
+        debug "compose_file: $compose_file"
+        compose_files_fp="${compose_files_fp} ${workspace_dir}/.devcontainer/${compose_file}"
+    done
+
+    debug "compose_files_fp: $compose_files_fp"
 
     echo "${compose_files_fp}"
 }
@@ -156,31 +157,35 @@ compose_status() {
 
 status_from_docker_compose() {
     local devcontainer_config="$1"
-    local status=""
-
+    local workspace_dir=$(get_workspace_dir)
     local composefiles=$(get_docker_compose_files "$devcontainer_config")
 
-    # using the config dockerComposeFile, we can use these paths with docker compose to return a list of services
-    # loop over each service to get the status
-    #
-    # append to the status variable
 
-    local workspace_dir=$(get_workspace_dir)
-    local args=""
-
-    for compose_file in ${composefiles}
+    local docker_status=""
+    for compose_file in ${compose_files}
     do
-        args="${args} -f ${compose_file}"
+        docker_status_tmp=$(${docker_command} -f "${compose_file}" ps --all --format json | jq -r '. | "\(.Service):\(.State)"')
+        
+        if [[ -z "${docker_status_tmp}" ]]; then
+            services=$(${docker_command} -f "${compose_file}" config --services)
+            for service in ${services}
+            do
+                image=$(docker images -q --filter reference="*${project_name//-/*}*${service}*:*")
+                if [[ -n "${image}" ]]; then
+                    image_status="built"
+                else
+                    image_status="unknown"
+                fi
+                if [[ "${docker_status}" != *${service}* ]]; then
+                    docker_status="${docker_status} ${service}: ${image_status}"
+                fi
+            done
+        else
+            docker_status="${docker_status_tmp}"
+        fi
     done
 
-    debug "ARGS: $args"
-
-    docker_compose_config=$(docker compose $args config --format json 2>/dev/null)
-    debug "CONFIG: $docker_compose_config"
-
-    echo "$docker_compose_config" | jq -r '.services | keys[] as $k | "\($k):\(.[$k].image // "no image")"' | xargs
-
-    # echo "${status}"
+    echo "${docker_status}"
 }
 
 #####################################################################
@@ -191,30 +196,26 @@ status_from_docker_compose() {
 #
 #####################################################################
 status_from_docker_file() {
-    local -r project_name="$1"
-    local docker_status=""
+    local devcontainer_config="$1"
+    local workspace_dir=$(get_workspace_dir)
 
-    status=$(docker ps -a --format json | jq -r ". | select(.Names | contains(\"${project_name}\")) | .State")
-    if [[ -z "${status}" ]]; then
-        status=$(docker ps -all --format json | jq -r ". | select(.Image | contains(\"${project_name}\")) | .State")
-    fi
+    local container_config=$(docker ps --format json | jq -r ". | select((.Labels | contains(\"$workspace_dir\"))) | .")
+    local container_status=$(echo "$container_config" | jq -r '.State // ""')
 
-    if [[ -n "${status}" ]]; then
-        docker_status="${project_name}: ${status} (plain)"
-    else
-        image=$(docker images -a | grep -E ".*(${CURRENT_PANE_PATH##*/}|${project_name//-/*}).*")
-        if [[ -n "${image}" ]]; then
-            docker_status="${project_name}: built (plain)"
-        else
-            docker_status="${project_name}: unkown (plain)"
-        fi
-    fi
-
-    echo "${docker_status}"
+    echo "Dockerfile:${container_status:-unknown}"
 }
 
 status_from_image() {
-    echo "IMAGE STATUS"
+    local devcontainer_config="$1"
+    local workspace_dir=$(get_workspace_dir)
+
+    local image_name=$(echo "$devcontainer_config" | jq -r '.image // ""')
+    local image_short_name=${image_name##*/}
+
+    local container_config=$(docker ps --format json | jq -r ". | select((.Image == \"$image_name\") and (.Labels | contains(\"$workspace_dir\"))) | .")
+    local container_status=$(echo "$container_config" | jq -r '.State // ""')
+
+    echo "$image_short_name:${container_status:-unknown}"
 }
 
 
@@ -222,17 +223,11 @@ detect_orchestration() {
     local devcontainer_config="$1"
     local orchestrator=""
 
-    # debug "devcontainer config: $devcontainer_config"
-
-    # debug "dockerComposeFile: $(echo $devcontainer_config | jq -r ".dockerComposeFile // \"\"")"
-    # debug "dockerFile: $(echo $devcontainer_config | jq -r ".dockerFile // \"\"")"
-    # debug "image: $(echo $devcontainer_config | jq -r ".image // \"\"")"
-
-    if [[ -n $(echo $devcontainer_config | jq -r ".dockerComposeFile // \"\"") ]]; then
+    if [[ -n $(echo $devcontainer_config | jq -r '.dockerComposeFile // ""') ]]; then
         orchestrator="compose"
-    elif [[ -n $(echo $devcontainer_config | jq -r ".dockerFile // \"\"") ]]; then
+    elif [[ -n $(echo $devcontainer_config | jq -r '.dockerFile // ""') ]]; then
         orchestrator="docker"
-    elif [[ -n $(echo $devcontainer_config | jq -r ".image // \"\"") ]]; then
+    elif [[ -n $(echo $devcontainer_config | jq -r '.image // ""') ]]; then
         orchestrator="image"
     else
         orchestrator="none"
@@ -260,10 +255,10 @@ if [[ -d $(get_workspace_dir) ]]; then
             docker_status=$(status_from_docker_compose "$devcontainer_config")
             ;;
         "docker")
-            docker_status=$(status_from_docker_file "${project_name}")
+            docker_status=$(status_from_docker_file "${devcontainer_config}")
             ;;
         "image")
-            docker_status=$(status_from_image)
+            docker_status=$(status_from_image "${devcontainer_config}")
             ;;
         *)
             docker_status="Devcontainer Parse Error"
