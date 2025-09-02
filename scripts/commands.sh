@@ -6,19 +6,16 @@ source "$CURRENT_DIR/helpers.sh"
 
 run_up() {
     check_workspace
-    # tmux display-message "Starting devcontainer..."
     tmux new-window -n "devcontainer_build" -c "$(get_workspace_dir)" "tmux set-option remain-on-exit failed; devcontainer up --workspace-folder . && tmux refresh-client -S"
 }
 
 run_down() {
     check_workspace
-    # tmux display-message "Stopping devcontainer..."
-    tmux new-window -n "devcontainer_down" -c "$(get_workspace_dir)" "tmux set-option remain-on-exit failed; docker compose down"
+    tmux new-window -n "devcontainer_down" -c "$(get_workspace_dir)" "tmux set-option remain-on-exit failed; docker compose down && tmux refresh-client -S"
 }
 
 run_rebuild() {
     check_workspace
-    tmux display-message "Rebuilding devcontainer..."
     run_down
     run_up
 }
