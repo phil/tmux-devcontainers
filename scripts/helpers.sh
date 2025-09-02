@@ -70,11 +70,11 @@ get_workspace_dir() {
 # Example: get_devcontainer_config ".configuration.name"
 # Example: get_devcontainer_config ".configuration.name" "app-server"
 get_devcontainer_config() {
-    debug "Getting devcontainer config for key path: $1 with default value: $2"
+    # debug "Getting devcontainer config for key path: $1 with default value: $2"
     local key_path="$1"
     local default_value="$2"
 
-    # TODO: Memoize this function to avoid multiple calls to devcontainer read-configuration
+    # TODO: Memoize this function to avoid multiple calls to devcontainer read-configuration?
     local json=$(devcontainer read-configuration --workspace-folder "$(get_workspace_dir)" 2>/dev/null)
 
     local value=$(echo "$json" | jq -r "${key_path} // \"\"")

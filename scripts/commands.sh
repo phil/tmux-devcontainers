@@ -7,7 +7,7 @@ source "$CURRENT_DIR/helpers.sh"
 run_up() {
     check_workspace
     # tmux display-message "Starting devcontainer..."
-    tmux new-window -n "devcontainer_build" -c "$(get_workspace_dir)" "tmux set-option remain-on-exit failed; devcontainer up --workspace-folder ."
+    tmux new-window -n "devcontainer_build" -c "$(get_workspace_dir)" "tmux set-option remain-on-exit failed; devcontainer up --workspace-folder . && tmux refresh-client -S"
 }
 
 run_down() {
