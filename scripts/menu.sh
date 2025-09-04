@@ -16,7 +16,8 @@ show_active_menu() {
         "-Workspace: #[fg=white]${project_name}" "" "" \
         "" \
         "Up"                    u "run -b 'source $CURRENT_DIR/commands.sh && run_up'" \
-        "Down (docker compose)" d "run -b 'source $CURRENT_DIR/commands.sh && run_down'" \
+        "Down"                  d "run -b 'source $CURRENT_DIR/commands.sh && run_down'" \
+        "Purge"                 p "run -b 'source $CURRENT_DIR/commands.sh && run_purge'" \
         "ReBuild"               r "run -b 'source $CURRENT_DIR/commands.sh && run_rebuild'" \
         "Exec in popup"         e "run -b 'source $CURRENT_DIR/commands.sh && run_exec_in_popup'" \
         "Exec in new window"    E "run -b 'source $CURRENT_DIR/commands.sh && run_exec_in_window'" \
