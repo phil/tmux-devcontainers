@@ -9,6 +9,7 @@ show_menu() {
 }
 
 show_active_menu() {
+    check_workspace
     local project_name=$(get_devcontainer_config ".configuration.name")
 #         "ReBuild"               r "run -b 'source $CURRENT_DIR/commands.sh && run_rebuild'" \
 
