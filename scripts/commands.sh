@@ -23,26 +23,26 @@ up_command() {
 }
 
 ######################################################################
-# down
+# Stop: Stops the running container(s) without removing them
 ######################################################################
 
-run_down() {
+run_stop() {
     check_workspace
     local workspace_dir=$(get_workspace_dir)
     local devcontainer_config=$(get_devcontainer_config ".configuration")
 
-    local command=$(down_command "$devcontainer_config")
+    local command=$(stop_command "$devcontainer_config")
     tmux new-window -n "devcontainer_down" -c "$workspace_dir" "tmux set-option remain-on-exit failed; ${command} && tmux refresh-client -S"
 }
 
-test_down() {
-    debug "Running Down"
+test_stop() {
+    debug "Running Stop"
     local devcontainer_config=$(get_devcontainer_config ".configuration")
-    local command=$(down_command "$devcontainer_config")
+    local command=$(stop_command "$devcontainer_config")
     eval "$command"
 }
 
-down_command() {
+stop_command() {
     local devcontainer_config=$1
     local workspace_dir=$(get_workspace_dir)
 
@@ -68,32 +68,32 @@ down_command() {
 }
 
 ######################################################################
-# purge
+# Down: Stops and removes the container(s), networks, and volumes
 ######################################################################
 
-run_purge() {
+run_down() {
     check_workspace
-    run_down
+    run_stop
 
     local workspace_dir=$(get_workspace_dir)
     local devcontainer_config=$(get_devcontainer_config ".configuration")
-    local command=$(purge_command "$devcontainer_config")
+    local command=$(down_command "$devcontainer_config")
 
     tmux new-window -n "devcontainer_down" -c "$workspace_dir" "tmux set-option remain-on-exit failed; ${purge_command} && tmux refresh-client -S"
 }
 
-test_purge() {
-    debug "Running Purge"
+test_down() {
+    debug "Running Down"
 
-    test_down
+    test_stop
 
     local devcontainer_config=$(get_devcontainer_config ".configuration")
-    local command=$(purge_command "$devcontainer_config")
+    local command=$(down_command "$devcontainer_config")
 
     eval "$command"
 }
 
-purge_command() {
+down_command() {
     local devcontainer_config="$1"
     local workspace_dir=$(get_workspace_dir)
 
@@ -115,14 +115,6 @@ purge_command() {
                 echo "docker rm $container_id"
             fi ;;
     esac
-}
-
-
-
-run_rebuild() {
-    check_workspace
-    run_purge
-    run_up
 }
 
 run_exec_in_popup() {
