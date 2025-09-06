@@ -9,19 +9,17 @@ show_menu() {
 }
 
 show_active_menu() {
+    check_workspace
     local project_name=$(get_devcontainer_config ".configuration.name")
+#         "ReBuild"               r "run -b 'source $CURRENT_DIR/commands.sh && run_rebuild'" \
 
     tmux display-menu -T " Devcontainers " \
         "" \
         "-Workspace: #[fg=white]${project_name}" "" "" \
         "" \
         "Up"                    u "run -b 'source $CURRENT_DIR/commands.sh && run_up'" \
-        "Down (docker compose)" d "run -b 'source $CURRENT_DIR/commands.sh && run_down'" \
-        "ReBuild"               r "run -b 'source $CURRENT_DIR/commands.sh && run_rebuild'" \
+        "Stop"                  s "run -b 'source $CURRENT_DIR/commands.sh && run_stop'" \
+        "Down"                  d "run -b 'source $CURRENT_DIR/commands.sh && run_down'" \
         "Exec in popup"         e "run -b 'source $CURRENT_DIR/commands.sh && run_exec_in_popup'" \
-        "Exec in new window"    E "run -b 'source $CURRENT_DIR/commands.sh && run_exec_in_window'" \
-        "" \
-        "-All commands work with the devcontainers cli," "" "" \
-        "-except commands specified with 'docker compose'" "" "" \
-        "-Exec commands assume bash is available in the container" "" ""
+        "Exec in new window"    E "run -b 'source $CURRENT_DIR/commands.sh && run_exec_in_window'"
 }

@@ -18,28 +18,6 @@ get_project_name() {
 }
 
 #####################################################################
-#
-# get_docker_compose_files
-#
-# Try to get the the docker compose files from the devcontainer config
-# and return their full path
-#
-#####################################################################
-get_docker_compose_files() {
-    local devcontainer_config="$1"
-    local compose_files=$(echo "$devcontainer_config" | jq -r ".dockerComposeFile | arrays // [.] | .[]")
-    local workspace_dir=$(get_workspace_dir)
-    local compose_files_full_path=""
-
-    for compose_file in ${compose_files}
-    do
-        compose_files_full_path="${compose_files_full_path} ${workspace_dir}/.devcontainer/${compose_file}"
-    done
-
-    echo "${compose_files_full_path}"
-}
-
-#####################################################################
 # status_from_docker_compose
 # return devcontainer status when using docker compose
 # This function handles multiple compose files and merges their status
@@ -52,7 +30,7 @@ status_from_docker_compose() {
 
     # setup docker compose command with all compose files
     local docker_compose_command="docker compose"
-    for compose_file in ${compose_files}
+    for compose_file in ${compose_files[*]}
     do
         docker_compose_command="${docker_compose_command} -f ${compose_file}"
     done
@@ -112,26 +90,6 @@ status_from_image() {
     echo "$image_short_name:${container_status:-unknown}"
 }
 
-#####################################################################
-# detect_orchestration
-# Detect which orchestration method is used in the devcontainer
-#####################################################################
-detect_orchestration() {
-    local devcontainer_config="$1"
-    local orchestrator=""
-
-    if [[ -n $(echo $devcontainer_config | jq -r '.dockerComposeFile // ""') ]]; then
-        orchestrator="compose"
-    elif [[ -n $(echo $devcontainer_config | jq -r '.dockerFile // ""') ]]; then
-        orchestrator="docker"
-    elif [[ -n $(echo $devcontainer_config | jq -r '.image // ""') ]]; then
-        orchestrator="image"
-    else
-        orchestrator="none"
-    fi
-
-    echo "${orchestrator}"
-}
 
 #####################################################################
 # Main code

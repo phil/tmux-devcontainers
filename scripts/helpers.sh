@@ -45,9 +45,9 @@ get_current_pane_path() {
 # and return the path to the workspace directory.
 get_workspace_dir() {
     local current_dir="$(get_current_pane_path)"
-    
+
     current_dir=$(realpath "$current_dir")
-    
+
     while [[ "$current_dir" != "/" ]]; do
         if [[ -d "$current_dir/.devcontainer" ]]; then
             break
@@ -97,4 +97,45 @@ check_workspace() {
 get_exec_command() {
     exec_command=$(get_devcontainer_config ".configuration.customizations.tmux.execCommand" "/bin/bash")
     echo "$exec_command"
+}
+
+#####################################################################
+# detect_orchestration
+# # Detect which orchestration method is used in the devcontainer
+# #####################################################################
+detect_orchestration() {
+    local devcontainer_config="$1"
+    local orchestrator=""
+
+    if [[ -n $(echo $devcontainer_config | jq -r '.dockerComposeFile // ""') ]]; then
+        orchestrator="compose"
+    elif [[ -n $(echo $devcontainer_config | jq -r '.dockerFile // ""') ]]; then
+        orchestrator="docker"
+    elif [[ -n $(echo $devcontainer_config | jq -r '.image // ""') ]]; then
+        orchestrator="image"
+    else
+        orchestrator="none"
+    fi
+
+    echo "${orchestrator}"
+}
+
+#####################################################################
+# get_docker_compose_files
+#
+# Try to get the the docker compose files from the devcontainer config
+# and return their full path
+#####################################################################
+get_docker_compose_files() {
+    local devcontainer_config="$1"
+    local compose_files=$(echo "$devcontainer_config" | jq -r ".dockerComposeFile | arrays // [.] | .[]")
+    local workspace_dir=$(get_workspace_dir)
+    local compose_files_full_path=""
+
+    for compose_file in ${compose_files}
+    do
+        compose_files_full_path="${compose_files_full_path} ${workspace_dir}/.devcontainer/${compose_file}"
+    done
+
+    echo "${compose_files_full_path}"
 }
