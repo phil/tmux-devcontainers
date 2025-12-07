@@ -17,9 +17,11 @@ show_active_menu() {
         "" \
         "-Workspace: #[fg=white]${project_name}" "" "" \
         "" \
-        "Up"                    u "run -b 'source $CURRENT_DIR/commands.sh && run_up'" \
-        "Stop"                  s "run -b 'source $CURRENT_DIR/commands.sh && run_stop'" \
-        "Down"                  d "run -b 'source $CURRENT_DIR/commands.sh && run_down'" \
-        "Exec in popup"         e "run -b 'source $CURRENT_DIR/commands.sh && run_exec_in_popup'" \
-        "Exec in new window"    E "run -b 'source $CURRENT_DIR/commands.sh && run_exec_in_window'"
+        "Up"                    u "run -b '$CURRENT_DIR/commands.sh run_up'" \
+        "Stop"                  s "run -b '$CURRENT_DIR/commands.sh run_stop'" \
+        "Down"                  d "run -b '$CURRENT_DIR/commands.sh run_down'" \
+        "Exec in popup"         e "run -b '$CURRENT_DIR/commands.sh run_exec_in_popup'" \
+        "Exec in new window"    E "run -b '$CURRENT_DIR/commands.sh run_exec_in_window'"
 }
+
+"$@"

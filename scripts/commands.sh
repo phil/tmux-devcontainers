@@ -127,3 +127,4 @@ run_exec_in_window() {
     tmux new-window "devcontainer exec --workspace-folder $(get_workspace_dir) $(get_exec_command)"
 }
 
+"$@"
