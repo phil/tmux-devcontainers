@@ -44,22 +44,24 @@ get_current_pane_path() {
 # This function will check parent directories for a .devcontainer directory, 
 # and return the path to the workspace directory.
 get_workspace_dir() {
-    local current_dir="$(get_current_pane_path)"
+    local current_dir prev_dir depth=0
 
-    current_dir=$(realpath "$current_dir")
+    # realpath fails on deleted dirs / broken symlinks / cycles -> bail out
+    current_dir="$(realpath "$(get_current_pane_path)" 2>/dev/null)" || return 0
+    [[ -z "$current_dir" ]] && return 0
 
-    while [[ "$current_dir" != "/" ]]; do
+    # Only walk absolute paths; dirname always shrinks them toward "/"
+    while [[ "$current_dir" == /* && "$current_dir" != "/" ]]; do
         if [[ -d "$current_dir/.devcontainer" ]]; then
-            break
+            echo "$current_dir"
+            return 0
         fi
+        prev_dir="$current_dir"
         current_dir=$(dirname "$current_dir")
+        [[ "$current_dir" == "$prev_dir" ]] && break   # no-shrink guard
+        (( ++depth > 100 )) && break                   # depth cap
     done
-
-    if [[ "$current_dir" == "/" ]]; then
-        echo ""
-    else 
-        echo "$current_dir"
-    fi
+    # no .devcontainer found -> emit nothing (empty)
 }
 
 # Get devcontainer configuration value from the current pane's devcontainer.json
